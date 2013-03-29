@@ -1,0 +1,43 @@
+APRSClient.py
+
+THE WHAT
+A Python module for talking to APRS-IS servers.
+
+THE WHAT (part deux)
+As is probably blindingly obvious by looking at the code, I'm a Python novice.
+
+Right now, all this module does is connect to an APRS-IS server, log in with a
+supplied callsign, passcode and filter, and print received APRS packets to stdout.
+
+THE WHY
+I'm doing a lot of work with APRS at the moment, and I'm also learning Python. The
+two go together well. Or really badly. Who knows? Nothing's caught fire... yet.
+
+THE HOW
+Use it like this:-
+
+import APRSClient
+
+server = 'vancouver.aprs2.net'
+port = 14580
+
+aprs = APRSClient
+aprs.callsign = 'VE7QQQ'
+aprs.passcode = '12345'
+aprs.receive_filter = 'r/48.45/-123.4/200'
+
+aprs.connect('vancouver.aprs2.net', 14580)
+
+...and enjoy the stream of APRS packets from the Pacific Northwest.
+
+THE WHAT NEXT
+* Everything
+
+Okay, being serious:-
+* Parsing of position packets
+* Decoding of compressed packets
+* Sending packets
+
+THE WHO
+
+(c) 2013 Andy Smith <andy@ve7cxz.net>
