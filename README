@@ -30,6 +30,11 @@ aprs.connect('vancouver.aprs2.net', 14580)
 
 ...and enjoy the stream of APRS packets from the Pacific Northwest.
 
+Unittests:-
+    cd unittests
+    PYTHONPATH=.. python test-APRSParser.py
+    PYTHONPATH=.. python test-APRSClient.py
+
 THE WHAT NEXT
 * Everything
 
@@ -37,6 +42,8 @@ Okay, being serious:-
 * Parsing of position packets
 * Decoding of compressed packets
 * Sending packets
+
+
 
 THE WHO
 

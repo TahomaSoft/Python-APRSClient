@@ -5,7 +5,7 @@ port=14580
 
 aprs=APRSClient
 aprs.callsign = 'VE6BRF'
-aprs.passcode = '55512'
+aprs.passcode = '12345'
 aprs.receive_filter = 'b/VE6BRF-9'
 
 aprs.connect (server, port)

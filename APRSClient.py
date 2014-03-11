@@ -64,6 +64,7 @@ class APRSParser:
     self.packet = packet
 
   def parse(self):
+    parsed={}
     if self.packet is not None:
       if self.packet[0] == "#":
         # We have a message beginning with '#' (a server message)
@@ -74,18 +75,15 @@ class APRSParser:
         # Pull the source callsign, destination, path and data from the raw packet
         packet_segments = re.search('([\w\-]+)>([\w\-]+),([\w\-\*\,]+):(.*)', self.packet)
         if packet_segments is not None:
-          (callsign, destination, path, data) = packet_segments.groups()
-          print "-----------------------------------------------------------------------------------------------------------"
-          print "RAW PACKET : " + self.packet
-          print "CALLSIGN   : " + colored(callsign, 'yellow')
-          print "DESTINATION: " + colored(destination, 'cyan')
-          print "PATH       : " + path
-          print "DATA       : " + data
-          print "  TYPE     : " + self.parse_id(data)
+          (parsed["callsign"], parsed["destination"], parsed["path"], parsed["data"]) = packet_segments.groups()
   
         else:
           # We couldn't parse the packet
           print colored("Could not parse - possibly non-packet data from server?", 'red')
+        return parsed
+
+##  def parse_telemetry(self, data):
+##    telem={}
 
   def parse_id(self, data):
     # Get the first character of the data field, and look it up
