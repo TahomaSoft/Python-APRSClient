@@ -16,4 +16,6 @@ while len(packet):
         print "DESTINATION: " + colored(parsed["destination"], 'cyan')
         print "PATH       : " + parsed["path"]
         print "DATA       : " + parsed["data"]
-        print "  TYPE     : " + aprs.parse_id(parsed["data"])
+        print "  TYPE     : " + aprs.data_type_verbose(aprs.get_data_type(parsed["data"]))
+	if aprs.get_data_type(parsed["data"]) == 'T':
+            print aprs.parse_telemetry(parsed["data"])

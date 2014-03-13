@@ -82,25 +82,39 @@ class APRSParser:
           print colored("Could not parse - possibly non-packet data from server?", 'red')
         return parsed
 
-##  def parse_telemetry(self, data):
-##    telem={}
+  # Validate data_type.
+  def get_data_type(self, data):
+    type = data[0]
+    if self.data_types.get(type) is None:
+        return None
+    else:
+        return type
+
+  # Convert data_type to a string.
+  def data_type_verbose(self, data_type):
+    return self.data_types.get(self.get_data_type(data_type))
+
+  def parse_telemetry(self, data):
+    telem={}
+    r = re.search('^T#([0-9].*),([0-9].*),([0-9].*),([0-9].*),([0-9].*),([0-9].*),([01].*)$', data)
+    if r is not None:
+        (telem["sequence"], telem["ch1"], telem["ch2"], telem["ch3"], telem["ch4"],telem["ch5"],telem["bits"]) = r.groups()
+    return telem
 
   def parse_id(self, data):
-    # Get the first character of the data field, and look it up
-    type_id = data[0]
-    data_type = self.data_types.get(type_id)
+    data_type = self.get_data_type(data)
     # Check we have a valid data type
     if data_type is None:
       # The spec allows '!' (and *only* '!') to appear anywhere in the first 40 characters of the data string to be valid
-      check_for_bang = re.search('!', data[0:40])
-      if check_for_bang is not None:
-        return colored(self.data_types.get('!'), 'green') + " ('!' at position " + str(check_for_bang.start()) + ")"
+      # (To support Fixed format digipeaters (no APRS) )
+      if '!' in data[0:40]:
+        return colored(self.get_data_type(data_type), 'green') + " ('!' at position " + str(check_for_bang.start()) + ")"
       else:
         # Couldn't find '!' in the first 40 characters either, so return 'Unknown'
-        return colored("Unknown", 'magenta')
+        return "Unknown"
     else:
       # Return the data type
-      return colored(data_type, 'green')
+      return data_type
 
 class APRSClientException(Exception):
     def __init__(self, value):
