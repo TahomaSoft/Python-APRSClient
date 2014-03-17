@@ -3,9 +3,11 @@
 # Import required modules
 from twisted.internet.protocol import ClientFactory
 from twisted.protocols.basic import LineReceiver
+from twisted.internet.serialport import SerialPort
 from twisted.internet import reactor
 from termcolor import colored
 import sys, re
+from APRSParser import APRSParser
 
 # Variables that we'll need later
 server = None
@@ -15,19 +17,20 @@ passcode = None
 receive_filter = None
 
 # The actual APRS-IS connector
-class APRSConnector(LineReceiver):
+class APRSISConnector(LineReceiver):
 
     def connectionMade(self):
         print colored(server + " <<< " + "Logging in...", 'cyan')
         self.sendLine("user " + callsign + " pass " + passcode + " vers Python/APRS 0.1 filter " + receive_filter)
 
     def lineReceived(self, line):
+        print line
         parser = APRSParser(line)
-        parser.parse()
+        print parser.parse()
 
-# APRSConnector factory class
-class APRSConnectorFactory(ClientFactory):
-    protocol = APRSConnector
+# APRSISConnector factory class
+class APRSISConnectorFactory(ClientFactory):
+    protocol = APRSISConnector
 
     def clientConnectionFailed(self, connector, reason):
         print 'connection failed:', reason.getErrorMessage()
@@ -37,84 +40,21 @@ class APRSConnectorFactory(ClientFactory):
         print 'connection lost:', reason.getErrorMessage()
         reactor.stop()
 
-# APRSParser class
-class APRSParser:
-  packet = None
+class APRSSerial(LineReceiver):
 
-  # These data types are taken directly from the APRS spec at http://aprs.org/doc/APRS101.PDF
-  # This is not an exhaustive list. These are the most common ones, and were added during
-  # testing.
-  data_types = {'!' : 'Position without timestamp',
-                    '_' : 'Weather Report (without position)',
-                    '@' : 'Position with timestamp (with APRS messaging)',
-                    '/' : 'Position with timestamp (no APRS messaging)',
-                    '=' : 'Position without timestamp (with APRS messaging)',
-                    'T' : 'Telemetry data',
-                    ';' : 'Object',
-                    '<' : 'Station Capabilities',
-                    '>' : 'Status',
-                    '`' : 'Current Mic-E Data (not used in TM-D700)',
-                    '?' : 'Query',
-                    '\'' : 'Old Mic-E Data (but Current data for TM-D700)',
-                    ':' : 'Message',
-                    '$' : 'Raw GPS data or Ultimeter 2000',
-                    }
+    def processData(self, data):
+        print "processData:"+data
 
-  def __init__(self, packet):
-    self.packet = packet
+    def connectionMade(self):
+        print 'Connected to TNC'
 
-  def parse(self):
-    parsed={}
-    if self.packet is not None:
-      if self.packet[0] == "#":
-        # We have a message beginning with '#' (a server message)
-        global server
-        print colored(server + " >>> " + self.packet, 'green')
-      else:
-        # Assume we have an APRS message, so...
-        # Pull the source callsign, destination, path and data from the raw packet
-        packet_segments = re.search('([\w\-]+)>([\w\-]+),([\w\-\*\,]+):(.*)', self.packet)
-        if packet_segments is not None:
-          (parsed["callsign"], parsed["destination"], parsed["path"], parsed["data"]) = packet_segments.groups()
-  
-        else:
-          # We couldn't parse the packet
-          print colored("Could not parse - possibly non-packet data from server?", 'red')
+    def lineReceived(self, data):
+        print "Received: {0}".format(data)
+        parser=APRSParser(data)
+        #
+        # After this, we'll have a callsign, destination, path, and 'data'.
+	parsed = parser.parse()
         return parsed
-
-  # Validate data_type.
-  def get_data_type(self, data):
-    type = data[0]
-    if self.data_types.get(type) is None:
-        return None
-    else:
-        return type
-
-  # Convert data_type to a string.
-  def data_type_verbose(self, data_type):
-    return self.data_types.get(self.get_data_type(data_type))
-
-  def parse_telemetry(self, data):
-    telem={}
-    r = re.search('^T#([0-9].*),([0-9].*),([0-9].*),([0-9].*),([0-9].*),([0-9].*),([01].*)$', data)
-    if r is not None:
-        (telem["sequence"], telem["ch1"], telem["ch2"], telem["ch3"], telem["ch4"],telem["ch5"],telem["bits"]) = r.groups()
-    return telem
-
-  def parse_id(self, data):
-    data_type = self.get_data_type(data)
-    # Check we have a valid data type
-    if data_type is None:
-      # The spec allows '!' (and *only* '!') to appear anywhere in the first 40 characters of the data string to be valid
-      # (To support Fixed format digipeaters (no APRS) )
-      if '!' in data[0:40]:
-        return colored(self.get_data_type(data_type), 'green') + " ('!' at position " + str(check_for_bang.start()) + ")"
-      else:
-        # Couldn't find '!' in the first 40 characters either, so return 'Unknown'
-        return "Unknown"
-    else:
-      # Return the data type
-      return data_type
 
 class APRSClientException(Exception):
     def __init__(self, value):
@@ -122,7 +62,7 @@ class APRSClientException(Exception):
     def __str__(self):
       return repr(self.value)
 
-def connect(server_arg, port_arg):
+def APRSISConnect(server_arg, port_arg, handler):
     global server, port
     server = server_arg
     port = port_arg
@@ -130,11 +70,15 @@ def connect(server_arg, port_arg):
     try:
       if callsign is None or passcode is None or receive_filter is None:
         raise APRSClientException("Missing callsign, passcode or filter.")
-      factory = APRSConnectorFactory()
+      factory = APRSISConnectorFactory()
       reactor.connectTCP(server, port, factory)
       reactor.run()
     except APRSClientException, e:
       print e.value
+
+def APRSSerialConnect(port, baudrate):
+    s = SerialPort(APRSSerial(), port, reactor, baudrate=baudrate)
+    reactor.run()
 
 if __name__ == '__main__':
     main()
